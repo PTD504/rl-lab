@@ -13,7 +13,7 @@ class BaseArm(ABC):
         self.rng = rng if rng is not None else np.random.default_rng()
 
     @abstractmethod
-    def pull(self) -> float:
+    def pull(self, rng: np.random.Generator) -> float:
         """Draw a reward sample from the arm's distribution."""
         pass
 
@@ -24,13 +24,8 @@ class BaseArm(ABC):
         pass
     
     @abstractmethod
-    def random_walk(self, std: float = 0.01) -> None:
+    def random_walk(self, rng: np.random.Generator, std: float = 0.01) -> None:
         """Perturb the arm's true parameter by a small Gaussian increment (non-stationarity)."""
-        pass
-
-    @abstractmethod
-    def reset_params(self) -> None:
-        """Restore this arm's true parameter(s) to their initial value."""
         pass
 
 
@@ -41,20 +36,16 @@ class GaussianArm(BaseArm):
         super().__init__(rng)
         self.mean = mean
         self.std = std
-        self._init_mean = mean
 
-    def pull(self) -> float:
-        return float(self.rng.normal(loc=self.mean, scale=self.std))
+    def pull(self, rng: np.random.Generator) -> float:
+        return float(rng.normal(loc=self.mean, scale=self.std))
 
     @property
     def expected_value(self) -> float:
         return self.mean
     
-    def random_walk(self, std: float = 0.01) -> None:
-        self.mean += self.rng.normal(loc=0.0, scale=std)
-
-    def reset_params(self):
-        self.mean = self._init_mean
+    def random_walk(self, rng: np.random.Generator, std: float = 0.01) -> None:
+        self.mean += rng.normal(loc=0.0, scale=std)
 
 
 class BernoulliArm(BaseArm):
@@ -62,23 +53,17 @@ class BernoulliArm(BaseArm):
 
     def __init__(self, p: float = 0.5, rng: np.random.Generator = None):
         super().__init__(rng)
-        if not (0.0 <= p <= 1.0):
-            raise ValueError(f"Probability p must be in [0, 1], got {p}")
         self.p = p
-        self._init_p = p
 
-    def pull(self) -> float:
-        return float(self.rng.random() < self.p)
+    def pull(self, rng: np.random.Generator) -> float:
+        return float(rng.random() < self.p)
 
     @property
     def expected_value(self) -> float:
         return self.p
     
-    def random_walk(self, std: float = 0.01) -> None:
-        self.p = float(np.clip(self.p + self.rng.normal(loc=0.0, scale=std), 0.0, 1.0))
-
-    def reset_params(self) -> None:
-        self.p = self._init_p
+    def random_walk(self, rng: np.random.Generator, std: float = 0.01) -> None:
+        self.p = float(np.clip(self.p + rng.normal(loc=0.0, scale=std), 0.0, 1.0))
 
 
 class ExponentialArm(BaseArm):
@@ -86,23 +71,17 @@ class ExponentialArm(BaseArm):
 
     def __init__(self, scale: float = 1.0, rng: np.random.Generator = None):
         super().__init__(rng)
-        if scale <= 0:
-            raise ValueError(f"Scale must be strictly positive, got {scale}")
         self.scale = scale
-        self._init_scale = scale
 
-    def pull(self) -> float:
-        return float(self.rng.exponential(scale=self.scale))
+    def pull(self, rng: np.random.Generator) -> float:
+        return float(rng.exponential(scale=self.scale))
 
     @property
     def expected_value(self) -> float:
         return self.scale
     
-    def random_walk(self, std: float = 0.01) -> None:
-        self.scale = max(1e-6, self.scale + self.rng.normal(loc=0.0, scale=std))
-
-    def reset_params(self) -> None:
-        self.scale = self._init_scale
+    def random_walk(self, rng: np.random.Generator, std: float = 0.01) -> None:
+        self.scale = max(1e-6, self.scale + rng.normal(loc=0.0, scale=std))
 
 
 # =====================================================================
@@ -121,35 +100,20 @@ class KArmedBandit:
         
         self.k = len(arms)
         self.arms = arms
-        self.seed = seed
-        self.reset(seed=seed)
+        self.rng = np.random.default_rng(seed)
 
     def pull(self, action: int) -> float:
         """Execute action (pull an arm index) and return the observed reward."""
         if not (0 <= action < self.k):
             raise IndexError(f"Action index {action} out of bounds for {self.k}-armed bandit.")
         
-        reward = self.arms[action].pull()
+        reward = self.arms[action].pull(self.rng)
         return reward
-
-    def reset(self, seed: int = None):
-        """Reset step tracking and re-seed random number generators."""
-        if seed is not None:
-            self.seed = seed
-
-        for arm in self.arms:
-            arm.reset_params()
-        
-        # Re-seed each arm generator for reproducibility
-        if self.seed is not None:
-            base_rng = np.random.default_rng(self.seed)
-            for arm in self.arms:
-                arm.rng = np.random.default_rng(base_rng.integers(0, 1e9))
     
     def random_walk(self, std: float = 0.01) -> None:
         """Perturb all arms' true parameters (for non-stationary bandit problems)."""
         for arm in self.arms:
-            arm.random_walk(std=std)
+            arm.random_walk(self.rng, std=std)
 
     @property
     def expected_values(self) -> np.ndarray:
@@ -183,3 +147,15 @@ class KArmedBandit:
             ExponentialArm(scale=1.5, rng=None)
         ]
         return cls(arms=arms, seed=seed)
+
+def gaussian_arms_factory(k, rng, loc=0.0, scale=1.0, arm_std=1.0):
+    true_means = rng.normal(loc=loc, scale=scale, size=k)
+    return [GaussianArm(mean=m, std=arm_std, rng=rng) for m in true_means]
+
+def bernoulli_arms_factory(k, rng, low=0.0, high=1.0):
+    true_p = rng.uniform(low=low, high=high, size=k)
+    return [BernoulliArm(p=p, rng=rng) for p in true_p]
+
+def exponential_arms_factory(k, rng, low=0.5, high=3.0):
+    true_scale = rng.uniform(low=low, high=high, size=k)
+    return [ExponentialArm(scale=s, rng=rng) for s in true_scale]
