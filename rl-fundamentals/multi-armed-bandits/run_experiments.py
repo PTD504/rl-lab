@@ -1,5 +1,6 @@
 import numpy as np
 from bandit_engine import BaseArm, KArmedBandit
+import copy
 
 def run_single_run(bandit, agent, n_steps, non_stationary=False):
     """
@@ -31,8 +32,9 @@ def run_single_run(bandit, agent, n_steps, non_stationary=False):
 
 def run_bandit_experiment(
     agent_factory,
-    agent_params,
-    bandit,
+    agent_params: dict,
+    arm_factory,
+    k: int = 10,
     experimental_seeds: list[int] = None,
     n_runs: int = 2000,
     n_steps: int = 1000,
@@ -46,7 +48,10 @@ def run_bandit_experiment(
 
     for run in range(n_runs):
         seed = experimental_seeds[run]
-        bandit.reset(seed=seed)
+        rng = np.random.default_rng(seed)
+
+        arms = arm_factory(k, rng)
+        bandit = KArmedBandit(arms=copy.deepcopy(arms), seed=seed)
 
         agent_setup_rng = np.random.default_rng(seed)
         agent_seed = int(agent_setup_rng.integers(0, 1e9))
@@ -64,12 +69,13 @@ def run_bandit_experiment(
     return all_rewards, all_optimal
 
 def compare_agents(
-    bandit_arms,
-    agent_configs,
-    random_seed,
-    n_runs,
-    n_steps,
-    non_stationary
+    arm_factory,
+    agent_configs: list[dict],
+    k: int = 10,
+    random_seed: int = 84,
+    n_runs: int = 2000,
+    n_steps: int = 1000,
+    non_stationary: bool = False
 ):
     seed_generator = np.random.default_rng(random_seed)
     experimental_seeds = [int(seed_generator.integers(0, 1e9)) for _ in range(n_runs)]
@@ -77,13 +83,12 @@ def compare_agents(
     all_rewards = {cfg["label"]: np.zeros((n_runs, n_steps)) for cfg in agent_configs}
     all_optimal = {cfg["label"]: np.zeros((n_runs, n_steps)) for cfg in agent_configs}
 
-    shared_bandit = KArmedBandit(arms=bandit_arms)
-
     for cfg in agent_configs:
         rewards, optimal_actions = run_bandit_experiment(
             agent_factory=cfg["agent_type"],
             agent_params=cfg["agent_config"],
-            bandit=shared_bandit,
+            arm_factory=arm_factory,
+            k=k,
             experimental_seeds=experimental_seeds,
             n_runs=n_runs,
             n_steps=n_steps,
