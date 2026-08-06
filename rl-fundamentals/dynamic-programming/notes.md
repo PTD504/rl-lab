@@ -78,38 +78,38 @@ $$
 
 ## 4. Bellman Optimality Equation
 
-An **optimal policy** $\pi_*$ is a policy whose expected return is greater than or equal to all other policies across all states ($\pi \ge \pi' \iff v_{\pi}(s) \ge v_{\pi'}(s), \forall s$). All optimal policies share the same optimal value functions.
+An **optimal policy** $\pi_{\star}$ is a policy whose expected return is greater than or equal to all other policies across all states ($\pi \ge \pi' \iff v_{\pi}(s) \ge v_{\pi'}(s), \forall s$). All optimal policies share the same optimal value functions.
 
 ### 4.1 Optimal Value Functions
 
-- **Optimal State-Value Function $v_*(s)$**: The maximum value achievable under any policy for state $s$:
+- **Optimal State-Value Function $v_{\star}(s)$**: The maximum value achievable under any policy for state $s$:
 
 $$
-v_*(s) \doteq \max_{\pi} v_{\pi}(s), \quad \forall s \in \mathcal{S}
+v_{\star}(s) \doteq \max_{\pi} v_{\pi}(s), \quad \forall s \in \mathcal{S}
 $$
 
-- **Optimal Action-Value Function $q_*(s,a)$**: The maximum value achievable after taking action $a$ in state $s$ and thereafter following an optimal policy:
+- **Optimal Action-Value Function $q_{\star}(s,a)$**: The maximum value achievable after taking action $a$ in state $s$ and thereafter following an optimal policy:
 
 $$
-q_*(s,a) \doteq \max_{\pi} q_{\pi}(s,a), \quad \forall s \in \mathcal{S}, a \in \mathcal{A}(s)
+q_{\star}(s,a) \doteq \max_{\pi} q_{\pi}(s,a), \quad \forall s \in \mathcal{S}, a \in \mathcal{A}(s)
 $$
 
 ---
 
 ### 4.2 Bellman Optimality Equations
 
-Instead of averaging over policy actions ($\sum_a \pi(a \mid s)$), the optimal value function assumes the agent always chooses the **best action** ($\max_a$).
+Instead of averaging over policy actions — $\sum_a \pi(a \mid s)$ — the optimal value function assumes the agent always chooses the **best action** — $\max_a$.
 
-- **Bellman Optimality Equation for $v_*(s)$**:
-
-$$
-v_*(s) = \max_{a \in \mathcal{A}(s)} q_*(s,a) = \max_{a} \sum_{s', r} p(s', r \mid s, a) \left[ r + \gamma v_*(s') \right]
-$$
-
-- **Bellman Optimality Equation for $q_*(s,a)$**:
+- **Bellman Optimality Equation for $v_{\star}(s)$**:
 
 $$
-q_*(s,a) = \sum_{s', r} p(s', r \mid s, a) \left[ r + \gamma \max_{a'} q_*(s', a') \right]
+v_{\star}(s) = \max_{a \in \mathcal{A}(s)} q_{\star}(s,a) = \max_{a} \sum_{s', r} p(s', r \mid s, a) \left[ r + \gamma v_{\star}(s') \right]
+$$
+
+- **Bellman Optimality Equation for $q_{\star}(s,a)$**:
+
+$$
+q_{\star}(s,a) = \sum_{s', r} p(s', r \mid s, a) \left[ r + \gamma \max_{a'} q_{\star}(s', a') \right]
 $$
 
 > **Key Takeaway**: Bellman Optimality Equations replace the linear policy expectation $\sum_a \pi(a \mid s)$ with a non-linear $\max$ operator. Finding exact solutions requires solving this system of non-linear equations (which DP methods accomplish iteratively).
@@ -173,7 +173,7 @@ $$
 \pi'(s) \doteq \arg\max_{a} q_{\pi}(s, a) = \arg\max_{a} \sum_{s', r} p(s', r \mid s, a) \left[ r + \gamma v_{\pi}(s') \right]
 $$
 
-- **Optimality Check**: If $v_{\pi'}(s) = v_{\pi}(s)$ for all states $s \in \mathcal{S}$, then $v_{\pi} = v_*$ and the policy $\pi$ is already optimal.
+- **Optimality Check**: If $v_{\pi'}(s) = v_{\pi}(s)$ for all states $s \in \mathcal{S}$, then $v_{\pi} = v_{\star}$ and the policy $\pi$ is already optimal.
 
 
 ## 7. Policy Iteration
@@ -182,17 +182,17 @@ $$
 - **Core Mechanism**: Policy Iteration solves the control problem by strictly alternating between **Policy Evaluation** (estimating $v_{\pi}$ for current policy $\pi$) and **Policy Improvement** (making $\pi$ greedy with respect to $v_{\pi}$):
 
 $$
-\pi_0 \xrightarrow{\text{Evaluation}} v_{\pi_0} \xrightarrow{\text{Improvement}} \pi_1 \xrightarrow{\text{Evaluation}} v_{\pi_1} \xrightarrow{\text{Improvement}} \dots \xrightarrow{\text{Improvement}} \pi_* \xrightarrow{\text{Evaluation}} v_*
+\pi_0 \xrightarrow{\text{Evaluation}} v_{\pi_0} \xrightarrow{\text{Improvement}} \pi_1 \xrightarrow{\text{Evaluation}} v_{\pi_1} \xrightarrow{\text{Improvement}} \dots \xrightarrow{\text{Improvement}} \pi_{\star} \xrightarrow{\text{Evaluation}} v_{\star}
 $$
 
-- **Convergence**: Since a finite MDP has a finite number of distinct policies, this process is guaranteed to converge to an optimal policy $\pi_*$ and optimal value function $v_*$ in a finite number of steps.
+- **Convergence**: Since a finite MDP has a finite number of distinct policies, this process is guaranteed to converge to an optimal policy $\pi_{\star}$ and optimal value function $v_{\star}$ in a finite number of steps.
 
 ---
 
 ### 7.2 Pseudocode
 
 ```text
-Policy Iteration (using iterative policy evaluation) for estimating π ≈ π_*
+Policy Iteration (using iterative policy evaluation) for estimating π ≈ π_{\star}
 --------------------------------------------------------------------------------
 1. Initialization
    V(s) ∈ ℝ and π(s) ∈ A(s) arbitrarily for all s ∈ S
@@ -213,14 +213,14 @@ Policy Iteration (using iterative policy evaluation) for estimating π ≈ π_*
        π(s) ← argmax_a Σ_{s',r} p(s',r|s,a) [ r + γ V(s') ]
        If old-action ≠ π(s), then policy-stable ← false
 
-   If policy-stable, then stop and return V ≈ v_* and π ≈ π_*; else go to 2
+   If policy-stable, then stop and return V ≈ v_{\star} and π ≈ π_{\star}; else go to 2
 ```
 
 
 ## 8. Value Iteration
 
 ### 8.1 Concept & Relation to Policy Iteration
-- **What it is**: An efficient Dynamic Programming algorithm that computes the optimal value function $v_*$ without requiring multiple sweeps of policy evaluation per step.
+- **What it is**: An efficient Dynamic Programming algorithm that computes the optimal value function $v_{\star}$ without requiring multiple sweeps of policy evaluation per step.
 - **Variant of Policy Iteration**: Standard Policy Iteration requires running policy evaluation until full convergence ($\Delta < \theta$) in every iteration. **Value Iteration is a special variant of Policy Iteration** where policy evaluation is truncated after just **a single sweep** ($k = 1$).
 - **Key Differences**:
   | Feature | Policy Iteration | Value Iteration |
@@ -238,14 +238,14 @@ $$
 V_{k+1}(s) \leftarrow \max_{a} \sum_{s', r} p(s', r \mid s, a) \left[ r + \gamma V_k(s') \right], \quad \forall s \in \mathcal{S}
 $$
 
-After $V$ converges to $v_*$, the optimal deterministic policy $\pi_*$ is extracted in a final step.
+After $V$ converges to $v_{\star}$, the optimal deterministic policy $\pi_{\star}$ is extracted in a final step.
 
 ---
 
 ### 8.3 Pseudocode
 
 ```text
-Value Iteration, for estimating π ≈ π_*
+Value Iteration, for estimating π ≈ π_{\star}
 --------------------------------------------------------------------------------
 Algorithm parameter: a small threshold θ > 0 determining accuracy of estimation
 Initialize V(s), for all s ∈ S⁺, arbitrarily except that V(terminal) = 0
@@ -258,7 +258,7 @@ Loop:
         Δ ← max(Δ, |v - V(s)|)
 until Δ < θ
 
-Output a deterministic policy, π ≈ π_*, such that
+Output a deterministic policy, π ≈ π_{\star}, such that
     π(s) = argmax_a Σ_{s',r} p(s',r|s,a) [ r + γ V(s') ]
 ```
 
@@ -270,8 +270,8 @@ Output a deterministic policy, π ≈ π_*, such that
 | Algorithm | Input | Output | Key Characteristics |
 |---|---|---|---|
 | **Policy Evaluation** | Policy $\pi$ | $v_{\pi}$ | Iterates until value estimates converge to evaluate a fixed policy $\pi$ |
-| **Policy Iteration** | Initial policy $\pi_0$ | Optimal policy $\pi_*$, $v_*$ | Alternates between full Policy Evaluation and Policy Improvement |
-| **Value Iteration** | Initial values $V_0$ | Optimal policy $\pi_*$, $v_*$ | Single-step Bellman optimality update ($\max_a$) per sweep |
+| **Policy Iteration** | Initial policy $\pi_0$ | Optimal policy $\pi_{\star}$, $v_{\star}$ | Alternates between full Policy Evaluation and Policy Improvement |
+| **Value Iteration** | Initial values $V_0$ | Optimal policy $\pi_{\star}$, $v_{\star}$ | Single-step Bellman optimality update ($\max_a$) per sweep |
 
 ---
 
