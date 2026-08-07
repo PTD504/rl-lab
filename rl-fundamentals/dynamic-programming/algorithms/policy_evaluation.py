@@ -8,6 +8,7 @@ def policy_evaluation(
     V: np.ndarray | None = None,
     seed: int | None = None,
     initial_backups: int = 0,
+    truncated_steps: int = None,
 ) -> tuple[np.ndarray, int, dict[str, list[float]]]:
     """
     In-place implementation tracking total Bellman updates and convergence history.
@@ -23,6 +24,7 @@ def policy_evaluation(
 
     backups_count = initial_backups
     max_total_backup = initial_backups + max_backup
+    steps = 0
 
     history: dict[str, list[float]] = {
         "backup_count": [],
@@ -30,6 +32,9 @@ def policy_evaluation(
     }
 
     while backups_count < max_total_backup:
+
+        if truncated_steps is not None and steps >= truncated_steps:
+            break
 
         delta = 0.0
 
@@ -41,6 +46,7 @@ def policy_evaluation(
             backups_count += 1
             delta = max(delta, abs(v - V[s]))
 
+        steps += 1
         history["backup_count"].append(backups_count)
         history["delta"].append(delta)
 

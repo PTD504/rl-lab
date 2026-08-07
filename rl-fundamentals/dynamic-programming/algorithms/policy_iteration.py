@@ -3,7 +3,7 @@ import numpy as np
 from algorithms.policy_evaluation import policy_evaluation
 
 
-def policy_iteration(env, pi=None, max_backup: int = 100000, gamma: float = 0.9, seed: int | None = 84):
+def policy_iteration(env, pi=None, max_backup: int = 100000, gamma: float = 0.9, seed: int | None = 84, truncated_steps: int = None):
     if pi is None:
         pi = initialize_pi_policy(env, seed=seed)
 
@@ -21,7 +21,7 @@ def policy_iteration(env, pi=None, max_backup: int = 100000, gamma: float = 0.9,
         # Policy Evaluation (tracks Bellman updates & convergence history)
         remaining_backups = max_backup - total_backups
         V, eval_backups, eval_history = policy_evaluation(
-            env, pi, remaining_backups, gamma, V=V, seed=seed, initial_backups=total_backups
+            env, pi, remaining_backups, gamma, V=V, seed=seed, initial_backups=total_backups, truncated_steps=truncated_steps
         )
         total_backups += eval_backups
         history["backup_count"].extend(eval_history["backup_count"])
