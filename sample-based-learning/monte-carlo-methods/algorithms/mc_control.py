@@ -14,8 +14,17 @@ def mc_control(env, gamma, max_episodes, epsilon, seed: int = 84):
     Q = rng.random(size=(env.observation_space.n, env.action_space.n))
     N = np.zeros((env.observation_space.n, env.action_space.n), dtype=int)
 
+    history = {
+        'returns': [],
+        'lengths': [],
+        'max_q_change': []
+    }
+
     for _ in range(max_episodes):
+        Q_old = Q.copy()
         episode = generate_episode(env, pi, rng)
+        ep_return = sum(step[2] for step in episode)
+        ep_len = len(episode)
         G = 0.0
 
         first_visits = {}
@@ -40,4 +49,9 @@ def mc_control(env, gamma, max_episodes, epsilon, seed: int = 84):
                 for action in range(num_actions):
                     pi[s][action] = 1 - epsilon + epsilon / num_actions if action == opt_a else epsilon / num_actions
 
-    return Q, pi
+        q_diff = np.abs(Q - Q_old)
+        history['returns'].append(ep_return)
+        history['lengths'].append(ep_len)
+        history['max_q_change'].append(float(np.max(q_diff)))
+
+    return Q, pi, history

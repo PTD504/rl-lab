@@ -12,9 +12,18 @@ def offp_mc_control(env, gamma, max_episodes, seed):
         best_action = np.argmax(Q[state])
         pi[state] = [1.0 if a == best_action else 0.0 for a in range(env.action_space.n)]
 
+    history = {
+        'returns': [],
+        'lengths': [],
+        'max_q_change': []
+    }
+
     for _ in range(max_episodes):
+        Q_old = Q.copy()
         b = initialize_policy(env, rng)
         episode = generate_episode(env, b, rng)
+        ep_return = sum(step[2] for step in episode)
+        ep_len = len(episode)
 
         G = 0.0
         W = 1.0
@@ -34,4 +43,9 @@ def offp_mc_control(env, gamma, max_episodes, seed):
 
             W /= b[s][a]
 
-    return Q, pi
+        q_diff = np.abs(Q - Q_old)
+        history['returns'].append(ep_return)
+        history['lengths'].append(ep_len)
+        history['max_q_change'].append(float(np.max(q_diff)))
+
+    return Q, pi, history
