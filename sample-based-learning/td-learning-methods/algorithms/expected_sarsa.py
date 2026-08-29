@@ -1,7 +1,7 @@
 import numpy as np
-from utils import configure_terminal_state_value, choose_action_egreedy
+from algorithms.utils import configure_terminal_state_value, choose_action_egreedy
 
-def expected_sarsa(env, step_size, gamma, epsilon, max_episodes, seed):
+def expected_sarsa(env, step_size, gamma, epsilon, epsilon_decay_rate, max_episodes, seed):
     """
     Expected SARSA algorithm implementation
     """
@@ -12,10 +12,21 @@ def expected_sarsa(env, step_size, gamma, epsilon, max_episodes, seed):
     # Set Q(terminal, .) = 0.0
     configure_terminal_state_value(env, Q)
 
+    history = {
+        "num_steps": [],
+        "convergence_speed": [],
+        "avg_reward": []
+    }
+
     for _ in range(max_episodes):
         # Initialize the starting state
         s, _ = env.reset()
         is_terminated = False
+
+        step = 0
+        avg_reward = 0.0
+
+        Q_old = Q.copy()
 
         while not is_terminated:
             # In each time step of the episode, choose the action a using epsilon greedy
@@ -30,8 +41,19 @@ def expected_sarsa(env, step_size, gamma, epsilon, max_episodes, seed):
             
             s = s_next
             is_terminated = terminated or truncated
+            step += 1
+            avg_reward += r
 
-    return Q
+        avg_reward /= step
+
+        epsilon *= epsilon_decay_rate
+        epsilon = max(epsilon, 0.01)
+
+        history["num_steps"].append(step)
+        history["convergence_speed"].append(np.max(np.abs(Q - Q_old)))
+        history["avg_reward"].append(avg_reward)
+
+    return Q, history
 
 def calculate_expected_q_value_at_state_s(q_values, epsilon):
     """
