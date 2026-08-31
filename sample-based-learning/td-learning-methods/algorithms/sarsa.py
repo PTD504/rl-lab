@@ -51,7 +51,7 @@ def sarsa(env, step_size, gamma, epsilon, epsilon_decay_rate, max_episodes, seed
         avg_reward /= step
 
         # Decay epsilon
-        epsilon *= epsilon_decay_rate
+        epsilon = epsilon_decay_rate * epsilon if epsilon_decay_rate is not None else epsilon
         epsilon = max(epsilon, 0.01)
 
         history["num_steps"].append(step)
