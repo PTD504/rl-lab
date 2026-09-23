@@ -38,9 +38,14 @@ class ReplayBuffer:
 
         for i in range(1, 4):
             if self.dones[ids[i]] or ids[i] == self.latest_ptr:
-                for j in range(i + 1, 4):
+                for j in range(i, 4):
                     ids[j] = ids[i - 1]
                 break
+
+        # Handle the case where the buffer is not yet full and we are trying to get a stack of frames that includes uninitialized frames.
+        if self.size < self.capacity and index < 3:
+            for i in range(4 - index - 1):
+                ids[i] = 0
 
         return np.stack([self.frames[i] for i in ids], axis=0)
 
