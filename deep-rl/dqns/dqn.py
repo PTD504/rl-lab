@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from utils.replay_buffer_v1 import ReplayBuffer
+from utils.replay_buffer_v2 import ReplayBuffer
 from utils.cnn import NeuralNetwork
 
 # Integrate TensorBoard for logging and monitoring training progress
@@ -19,11 +19,11 @@ class DQNAgent:
         epsilon_end=0.01,
         exploration_fraction=0.1,
         exploration_steps=None,
-        buffer_size=500000,
+        buffer_size=500_000,
         batch_size=64,
         learning_starts=50_000,
         train_freq=4,
-        target_update_freq=5000,
+        target_update_freq=5_000,
         device='cuda',
         seed=2004,
         tensorboard_log_dir='runs',
@@ -120,7 +120,8 @@ class DQNAgent:
                 next_state, reward, terminated, truncated, _ = env.step(action)
 
                 # Add the transition to the replay buffer
-                self.replay_buffer.add(state, action, reward, next_state, terminated)
+                # In this implementation, we consider the episode to be finished if either terminated or truncated is True
+                self.replay_buffer.add(state, action, reward, next_state, terminated or truncated)
 
                 if (
                     total_time_steps >= self.learning_starts

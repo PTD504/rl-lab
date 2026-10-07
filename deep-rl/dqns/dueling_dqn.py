@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from utils.replay_buffer_v1 import ReplayBuffer
+from utils.replay_buffer_v2 import ReplayBuffer
 
 # Integrate TensorBoard for logging and monitoring training progress
 from torch.utils.tensorboard import SummaryWriter
@@ -65,7 +65,7 @@ class DuelingDQNAgent:
     def __init__(
         self,
         action_dim,
-        lr=1e-3,
+        lr=1e-4,
         gamma=0.99,
         epsilon_start=1.0,
         epsilon_end=0.01,
@@ -167,7 +167,7 @@ class DuelingDQNAgent:
                 next_state, reward, terminated, truncated, _ = env.step(action)
 
                 # Add the transition to the replay buffer
-                self.replay_buffer.add(state, action, reward, next_state, terminated)
+                self.replay_buffer.add(state, action, reward, next_state, terminated or truncated)
 
                 if (
                     total_time_steps >= self.learning_starts

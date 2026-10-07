@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from utils.replay_buffer_v1 import ReplayBuffer
+from utils.replay_buffer_v2 import ReplayBuffer
 from utils.cnn import NeuralNetwork
 from torch.utils.tensorboard import SummaryWriter
 
@@ -10,7 +10,7 @@ class DoubleDQNAgent:
     def __init__(
         self,
         action_dim,
-        lr=1e-3,
+        lr=1e-4,
         gamma=0.99,
         epsilon_start=1.0,
         epsilon_end=0.01,
@@ -111,7 +111,7 @@ class DoubleDQNAgent:
                 action = self.select_action(current_state)
                 next_state, reward, terminated, truncated, _ = env.step(action)
 
-                self.replay_buffer.add(state, action, reward, next_state, terminated)
+                self.replay_buffer.add(state, action, reward, next_state, terminated or truncated)
 
                 if (
                     total_time_steps >= self.learning_starts
