@@ -1,67 +1,123 @@
 # RL Lab
 
-A reinforcement learning study repository built around small, inspectable implementations and experiments. The code follows the progression from bandit problems and MDP foundations to dynamic programming, Monte Carlo methods, temporal-difference learning, and function approximation.
+RL Lab is a reinforcement-learning portfolio project focused on understanding
+the ideas that make an agent learn. The implementations are intentionally
+small and inspectable so that the connection between the mathematics, the
+update rules, and the agent's behavior remains clear.
 
-The goal is to make the learning mechanics visible: what information an algorithm needs, how its estimates are updated, how it explores, and where its assumptions become limiting.
+The project follows the progression from simple bandit problems to
+model-based planning, sample-based learning, function approximation, and deep
+reinforcement learning. Each stage introduces a new assumption or removes an
+old limitation. The purpose is not only to implement algorithms, but to
+understand why their targets, policies, and stability properties differ.
 
 ## Project structure
 
 ```text
 rl-lab/
-├── rl-fundamentals/                 # Core RL concepts and model-based methods
-│   ├── mdp-foundations/             # MDP definitions, returns, policies, and Bellman equations
-│   ├── multi-armed-bandits/         # Bandit agents, experiments, and exploration comparisons
-│   └── dynamic-programming/         # Grid world, policy evaluation, policy iteration, and value iteration
-├── sample-based-learning/           # Model-free learning from sampled experience
-│   ├── monte-carlo-methods/         # MC prediction/control and importance-sampling experiments
-│   └── td-learning-methods/         # TD(0), SARSA, Q-learning, Expected SARSA, and double estimators
-└── function-approximation/          # Linear and neural Q-learning with replay and target functions
+├── rl-fundamentals/
+│   ├── mdp-foundations/                  # States, returns, policies, values, Bellman equations
+│   ├── multi-armed-bandits/              # Exploration, exploitation, and action-value estimates
+│   └── dynamic-programming/              # Policy evaluation, policy iteration, and value iteration
+├── sample-based-learning/
+│   ├── monte-carlo-methods/              # Learning from complete episode returns
+│   └── td-learning-methods/              # Bootstrapping, SARSA, Q-learning, and related methods
+├── function-approximation/
+│   ├── algorithms/
+│   │   ├── linear-function-approximation/
+│   │   └── non-linear-function-approximation/
+│   └── notebooks/                        # Experiments beyond tabular value functions
+├── deep-rl/
+│   ├── dqns/                             # Deep value-based learning and its variants
+│   ├── policy-gradient/                  # Direct policy optimization and actor-critic methods
+│   ├── utils/                            # Shared models, replay buffers, and experiment helpers
+│   ├── experiments/                      # Reproducible experiment guides
+│   └── tests/                            # Focused correctness tests
+└── LICENSE
 ```
 
-## Insights from the repository
+## From value estimation to control
 
-### Multi-armed bandits
+The first part of the repository builds the language of reinforcement
+learning. Bandits isolate the exploration-exploitation problem without state
+transitions. MDP foundations then introduce states, actions, rewards, returns,
+policies, and value functions. These concepts provide the basis for reasoning
+about both prediction and control.
 
-Bandits isolate the exploration-exploitation problem before state transitions are introduced. The experiments compare epsilon-greedy action selection, optimistic initial values, UCB, and constant-step-size updates for non-stationary rewards. A central lesson is that there is no single exploration strategy that is best independently of the reward process: stationary and changing environments reward different choices.
+Dynamic programming uses a known environment model to repeatedly apply the
+Bellman equations. Policy evaluation estimates the value of a policy, while
+policy improvement uses those estimates to make the policy greedier. Policy
+iteration and value iteration show two closely related ways to approach an
+optimal policy.
 
-### MDP foundations
+Monte Carlo methods remove the need for a model and learn from complete
+episodes. They provide a direct estimate of returns, but updates must wait
+until an episode ends and can have high variance. Temporal-difference methods
+update earlier by bootstrapping from current estimates. Comparing TD(0),
+SARSA, Q-learning, Expected SARSA, and related variants makes the distinction
+between on-policy and off-policy learning concrete.
 
-MDPs provide the language for reasoning about states, actions, rewards, returns, policies, and value functions. The Bellman equations show how a long-term prediction can be decomposed into an immediate reward plus the value of what comes next. This recursive view is the common structure behind the algorithms implemented later.
+## Generalization and deep reinforcement learning
 
-### Dynamic programming
+Tabular methods treat every state or state-action pair as independent.
+Function approximation changes this by allowing related observations to share
+parameters. This makes larger or continuous state spaces possible, but also
+introduces approximation error and interference between updates.
 
-Dynamic programming solves finite MDPs when the environment model is known. Policy evaluation estimates how well a fixed policy performs, while policy improvement makes the policy greedy with respect to those estimates. Policy iteration alternates these two operations; value iteration combines them into a single optimality update. These methods are useful baselines, but their dependence on a complete model and their cost over large state spaces motivate sample-based learning.
+The deep-RL work continues this analysis with neural networks. Value-based
+experiments examine how replay buffers and target networks make bootstrapped
+learning more stable. Policy-based experiments study how policies can be
+optimized directly, and how baselines, value estimates, advantages, and
+constrained updates affect the learning process. The project is open to
+additional algorithms as the study develops.
 
-### Monte Carlo methods
+The central ideas are shared across all of these methods:
 
-Monte Carlo methods remove the need for an explicit transition model and learn from complete episodes. They estimate values from observed returns rather than from one-step predictions, which makes the estimates conceptually direct but delays updates and can produce high variance. The implementations cover first-visit prediction, on-policy control with epsilon-soft behavior, and off-policy prediction/control using importance sampling. The comparison between ordinary and weighted importance sampling highlights the practical trade-off between unbiasedness and variance.
+- estimating values or policies from incomplete information;
+- choosing between exploration and exploitation;
+- deciding whether an update should use a return or a bootstrap target;
+- managing the bias and variance of an estimator;
+- keeping learning stable when the target and the function are changing
+  together.
 
-### Temporal-difference learning
+These connections are the main focus of the project. The notebooks are used to
+inspect learning curves and behavior, while the algorithm modules make each
+update rule easy to follow.
 
-Temporal-difference methods learn from incomplete experience by bootstrapping from current estimates. TD(0), SARSA, Q-learning, and Expected SARSA differ mainly in how they construct the next-step target and whether the target follows the behavior policy or a greedy policy. Double Q-learning and Double Expected SARSA address the overestimation that can arise when the same estimates are used both to select and evaluate the best next action.
+## Experiments
 
-### Function approximation
+The notebooks are written as experiment guides rather than as stored results.
+They show how to configure an environment, choose a training budget, and
+compare learning behavior. Generated logs and checkpoints are kept locally
+under `runs/` instead of being treated as part of the algorithm itself.
 
-Tabular methods assign an independent value to every state or state-action pair. Function approximation replaces that table with a parameterized model, allowing related states to share information and making continuous-valued observations practical. The current experiments move through three stages: online Q-learning with a linear model, replay-buffer Q-learning, and replay-buffer Q-learning with a periodically updated target function. Neural-network Q-learning then illustrates the additional representational capacity and stability concerns introduced by nonlinear models.
+To explore the notebooks, create an environment and start Jupyter from the
+repository root:
 
-The key trade-off is generalization versus interference. A parameter update can improve predictions for many related states, but it can also damage predictions elsewhere. Replay buffers and target functions help manage moving targets and correlated experience; they improve the learning setup without removing the importance of state representation, exploration, or reward design.
+```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install numpy torch jupyter matplotlib gymnasium imageio tensorboard
+jupyter lab
+```
 
-## A unifying view
+Some experiments may require additional environment-specific packages. The
+imports in each notebook indicate those requirements.
 
-The repository follows a sequence of increasingly relaxed assumptions:
+## Tests
 
-1. **Bandits** study action selection without state transitions.
-2. **Dynamic programming** uses a known environment model to compute value functions.
-3. **Monte Carlo methods** learn from complete sampled episodes.
-4. **Temporal-difference methods** learn online by combining samples with bootstrapping.
-5. **Function approximation** replaces explicit tables with shared parameters that can generalize across observations.
+The current focused tests cover replay-buffer behavior:
 
-Across these stages, the central design questions remain the same: what should be estimated, what data should update the estimate, how should the agent explore, and how can learning remain stable?
+```bash
+pytest deep-rl/tests
+```
 
-## Environment
-
-The implementations use Python with NumPy, PyTorch, and Jupyter. Several experiments use environments following the modern `reset()`/`step()` API, so a compatible Gym environment package may also be required.
+Training results can vary with random seeds, environment versions, and
+hardware. For that reason, comparisons should be interpreted through both the
+learning curves and the assumptions behind each algorithm.
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for
+details.
