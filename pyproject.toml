@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rl-lab"
+version = "0.1.0"
+description = "From-scratch reinforcement learning implementations, from tabular methods to deep RL"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+dependencies = [
+    "numpy>=1.26",
+    "torch>=2.2",
+    "gymnasium>=1.0",
+    "matplotlib>=3.8",
+    "imageio>=2.34",
+    "tensorboard>=2.16",
+]
+
+[project.optional-dependencies]
+atari = ["gymnasium[atari]>=1.0", "ale-py>=0.9"]   # DQN-family notebook
+box2d = ["gymnasium[box2d]>=1.0"]
+mujoco = ["gymnasium[mujoco]>=1.0"]
+notebook = ["jupyterlab", "ipykernel"]
+dev = ["pytest>=8", "ruff"]
+
+[tool.setuptools.packages.find]
+include = ["deep_rl*"]
+exclude = ["deep_rl.experiments*", "deep_rl.tests*", "deep_rl.runs*"]
+
+[tool.pytest.ini_options]
+testpaths = ["deep_rl/tests"]

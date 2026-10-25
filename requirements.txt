@@ -1,0 +1,2 @@
+# Install the package in editable mode with development tools.
+-e .[dev]
