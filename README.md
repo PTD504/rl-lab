@@ -1,20 +1,74 @@
 # RL Lab
 
-RL Lab is a reinforcement-learning portfolio project focused on understanding
-the ideas that make an agent learn. The implementations are intentionally
-small and inspectable so that the connection between the mathematics, the
-update rules, and the agent's behavior remains clear.
+![Python](https://img.shields.io/badge/python-3.10%2B-blue)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.x-ee4c2c)
+![Gymnasium](https://img.shields.io/badge/Gymnasium-1.x-0f9d58)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-The project follows the progression from simple bandit problems to
-model-based planning, sample-based learning, function approximation, and deep
-reinforcement learning. Each stage introduces a new assumption or removes an
-old limitation. The purpose is not only to implement algorithms, but to
-understand why their targets, policies, and stability properties differ.
+From-scratch reinforcement-learning implementations, from bandits and dynamic
+programming to DQN, PPO, DDPG, TD3 and SAC. The code is intentionally small and
+inspectable so the link between the math, the update rule and the agent's
+behavior stays clear.
+
+## Demo
+
+Continuous-control agents trained from scratch on `Pendulum-v1`:
+
+| DDPG | TD3 | SAC |
+|:---:|:---:|:---:|
+| ![DDPG on Pendulum](deep_rl/experiments/assets/pendulum_ddpg.gif) | ![TD3 on Pendulum](deep_rl/experiments/assets/pendulum_td3.gif) | ![SAC on Pendulum](deep_rl/experiments/assets/pendulum_sac.gif) |
+
+## Algorithms implemented
+
+| Area | Algorithm | Type | Code | Notebook | Theory notes |
+|---|---|---|---|---|---|
+| Bandits | epsilon-greedy, non-stationary, optimistic init, UCB | action-value | [agents.py](rl-fundamentals/multi-armed-bandits/agents.py) | [notebooks](rl-fundamentals/multi-armed-bandits/notebooks) | [MDPs.md](rl-fundamentals/mdp-foundations/MDPs.md) |
+| Dynamic programming | Policy evaluation, policy iteration, value iteration | model-based | [algorithms](rl-fundamentals/dynamic-programming/algorithms) | [notebooks](rl-fundamentals/dynamic-programming/notebooks) | [notes.md](rl-fundamentals/dynamic-programming/notes.md) |
+| Monte Carlo | MC prediction/control, off-policy MC | tabular | [algorithms](sample-based-learning/monte-carlo-methods/algorithms) | [notebooks](sample-based-learning/monte-carlo-methods/notebooks) | [notes.md](sample-based-learning/monte-carlo-methods/notes.md) |
+| TD learning | TD(0), SARSA, Q-learning, Expected SARSA, Double Q-learning, Double Expected SARSA | tabular | [algorithms](sample-based-learning/td-learning-methods/algorithms) | [notebooks](sample-based-learning/td-learning-methods/notebooks) | - |
+| Function approximation | Linear and non-linear Q-learning, replay buffer, target network | off-policy, value-based | [algorithms](function-approximation/algorithms) | [notebooks](function-approximation/notebooks) | [notes.md](function-approximation/notes.md) |
+| Deep value-based | DQN, Double DQN, Dueling DQN | off-policy, discrete | [dqn.py](deep_rl/dqns/dqn.py), [double_dqn.py](deep_rl/dqns/double_dqn.py), [dueling_dqn.py](deep_rl/dqns/dueling_dqn.py) | [dqns.ipynb](deep_rl/experiments/dqns.ipynb) | [notes.md](deep_rl/dqns/notes.md) |
+| Policy gradient | REINFORCE, REINFORCE with baseline | on-policy, discrete | [reinforce.py](deep_rl/policy_gradient/reinforce.py), [reinforce_with_baseline.py](deep_rl/policy_gradient/reinforce_with_baseline.py) | [policy_gradient.ipynb](deep_rl/experiments/policy_gradient.ipynb) | - |
+| Actor-critic | One-step Actor-Critic, A2C | on-policy, discrete | [actor_critic.py](deep_rl/policy_gradient/actor_critic.py), [a2c.py](deep_rl/policy_gradient/a2c.py) | [a2c_experiment.ipynb](deep_rl/experiments/a2c_experiment.ipynb) | - |
+| Actor-critic | PPO (clipped objective, GAE) | on-policy, discrete | [ppo.py](deep_rl/policy_gradient/ppo.py) | [ppo_experiment.ipynb](deep_rl/experiments/ppo_experiment.ipynb) | - |
+| Continuous control | DDPG | off-policy, continuous | [ddpg.py](deep_rl/continuous_control/ddpg.py) | [ddpg.ipynb](deep_rl/experiments/ddpg.ipynb) | - |
+| Continuous control | TD3 | off-policy, continuous | [td3.py](deep_rl/continuous_control/td3.py) | [td3.ipynb](deep_rl/experiments/td3.ipynb) | - |
+| Continuous control | SAC | off-policy, continuous | [sac.py](deep_rl/continuous_control/sac.py) | [sac.ipynb](deep_rl/experiments/sac.ipynb) | - |
+
+## Quick start
+
+```bash
+git clone <this-repo-url> && cd rl-lab
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,notebook]"   # optional extras: atari, box2d, mujoco
+pytest
+```
+
+The `deep_rl` package is importable after installation, so no `sys.path`
+changes are needed:
+
+```python
+import gymnasium as gym
+from deep_rl.continuous_control.sac import SACAgent
+
+env = gym.make("Pendulum-v1")
+agent = SACAgent(
+    state_dim=env.observation_space.shape[0],
+    action_dim=env.action_space.shape[0],
+    max_action=float(env.action_space.high[0]),
+)
+agent.learn(env, max_steps=20_000)
+print(agent.evaluate(env, num_episodes=5))
+```
+
+The DQN-family notebook needs the Atari extra: `pip install -e ".[atari]"`.
+Notebooks live in [deep_rl/experiments](deep_rl/experiments).
 
 ## Project structure
 
 ```text
 rl-lab/
+├── pyproject.toml
 ├── rl-fundamentals/
 │   ├── mdp-foundations/                  # States, returns, policies, values, Bellman equations
 │   ├── multi-armed-bandits/              # Exploration, exploitation, and action-value estimates
@@ -23,18 +77,20 @@ rl-lab/
 │   ├── monte-carlo-methods/              # Learning from complete episode returns
 │   └── td-learning-methods/              # Bootstrapping, SARSA, Q-learning, and related methods
 ├── function-approximation/
-│   ├── algorithms/
-│   │   ├── linear-function-approximation/
-│   │   └── non-linear-function-approximation/
+│   ├── algorithms/                       # Linear and non-linear function approximation
 │   └── notebooks/                        # Experiments beyond tabular value functions
-├── deep-rl/
-│   ├── dqns/                             # Deep value-based learning and its variants
-│   ├── policy-gradient/                  # Direct policy optimization and actor-critic methods
-│   ├── utils/                            # Shared models, replay buffers, and experiment helpers
-│   ├── experiments/                      # Reproducible experiment guides
-│   └── tests/                            # Focused correctness tests
+├── deep_rl/                              # Installable package
+│   ├── dqns/                             # DQN, Double DQN, Dueling DQN
+│   ├── policy_gradient/                  # On-policy: REINFORCE, baseline, Actor-Critic, A2C, PPO
+│   ├── continuous_control/               # Off-policy continuous control: DDPG, TD3, SAC
+│   ├── utils/                            # Shared networks, replay buffers, rendering
+│   ├── experiments/                      # Notebooks and demo assets
+│   └── tests/                            # pytest suite
 └── LICENSE
 ```
+
+The tabular and function-approximation folders are standalone study material
+and are not part of the installable package.
 
 ## From value estimation to control
 
@@ -84,38 +140,23 @@ These connections are the main focus of the project. The notebooks are used to
 inspect learning curves and behavior, while the algorithm modules make each
 update rule easy to follow.
 
-## Experiments
-
-The notebooks are written as experiment guides rather than as stored results.
-They show how to configure an environment, choose a training budget, and
-compare learning behavior. Generated logs and checkpoints are kept locally
-under `runs/` instead of being treated as part of the algorithm itself.
-
-To explore the notebooks, create an environment and start Jupyter from the
-repository root:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install numpy torch jupyter matplotlib gymnasium imageio tensorboard
-jupyter lab
-```
-
-Some experiments may require additional environment-specific packages. The
-imports in each notebook indicate those requirements.
-
 ## Tests
 
-The current focused tests cover replay-buffer behavior:
-
 ```bash
-pytest deep-rl/tests
+pytest
 ```
 
-Training results can vary with random seeds, environment versions, and
-hardware. For that reason, comparisons should be interpreted through both the
-learning curves and the assumptions behind each algorithm.
+The suite covers replay-buffer behavior, PPO checkpoint round-trips, and smoke
+tests that run PPO, DDPG, TD3 and SAC for a few steps.
+
+Generated logs and checkpoints are written locally under `runs/` and are not
+tracked. Training results vary with random seeds, environment versions, and
+hardware, so compare algorithms through learning curves and their assumptions.
+
+## Roadmap
+
+- PPO with continuous actions (Gaussian policy) and MuJoCo benchmarks.
+- Learning-curve comparisons for the continuous-control agents.
 
 ## License
 
