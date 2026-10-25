@@ -1,8 +1,8 @@
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
-from utils.mlp import MLP
-from pg_utils import generate_episode
+from deep_rl.utils.mlp import MLP
+from deep_rl.policy_gradient.pg_utils import generate_episode
 
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
@@ -12,19 +12,22 @@ class REINFORCE:
         self,
         state_dim,
         action_dim,
-        learning_rate=1e-3,
+        policy_learning_rate=1e-4,
+        value_learning_rate=1e-3,
         gamma=0.99,
         seed=2004,
         tensorboard_log_dir='runs',
-        run_name=None
+        run_name=None,
+        max_grad_norm=1.0
     ):
         torch.manual_seed(seed)
 
         self.pi = MLP(state_dim, action_dim, type='policy')
         self.v = MLP(state_dim, 1, (64,), type='value')
-        self.pi_optimizer = optim.Adam(self.pi.parameters(), lr=learning_rate)
-        self.v_optimizer = optim.Adam(self.v.parameters(), lr=learning_rate)
+        self.pi_optimizer = optim.Adam(self.pi.parameters(), lr=policy_learning_rate)
+        self.v_optimizer = optim.Adam(self.v.parameters(), lr=value_learning_rate)
         self.gamma = gamma
+        self.max_grad_norm = max_grad_norm
         run_name = run_name or 'reinforce_with_baseline'
         self.run_name = f'{run_name}_seed_{seed}'
         self.writer = (
@@ -34,9 +37,11 @@ class REINFORCE:
         )
 
     def learn(self, env, max_episodes=10000):
+        total_step = 0
         for episode in range(max_episodes):
             log_probs, states, rewards = generate_episode(env, self.pi)
             episode_return = sum(rewards)
+            total_step += len(rewards)
 
             # compute the discounted rewards
             G = 0.0
@@ -63,22 +68,25 @@ class REINFORCE:
             # update the value function
             self.v_optimizer.zero_grad()
             value_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.v.parameters(), self.max_grad_norm)
             self.v_optimizer.step()
 
             # Compute the policy loss
-            log_probs_tensor = torch.stack(log_probs)
+            log_probs_tensor = torch.stack(log_probs).squeeze(-1)
             policy_loss = -(log_probs_tensor * deltas).sum()
 
             # update the policy
             self.pi_optimizer.zero_grad()
             policy_loss.backward()
+            torch.nn.utils.clip_grad_norm_(self.pi.parameters(), self.max_grad_norm)
             self.pi_optimizer.step()
 
             if self.writer is not None:
-                self.writer.add_scalar('Episode/return', episode_return, episode)
-                self.writer.add_scalar('Episode/length', len(rewards), episode)
-                self.writer.add_scalar('Training/policy_loss', policy_loss.item(), episode)
-                self.writer.add_scalar('Training/value_loss', value_loss.item(), episode)
+                self.writer.add_scalar('Episode/return', episode_return, total_step)
+                self.writer.add_scalar('Episode/length', len(rewards), total_step)
+                self.writer.add_scalar('Training/policy_loss', policy_loss.item(), total_step)
+                self.writer.add_scalar('Training/value_loss', value_loss.item(), total_step)
+                self.writer.add_scalar('System/total_steps', total_step, total_step)
                 self.writer.flush()
 
     def close(self):

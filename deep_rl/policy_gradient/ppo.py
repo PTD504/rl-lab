@@ -298,5 +298,29 @@ class PPO:
 
         return metrics
 
+    def save_checkpoint(self, path):
+        """
+        Save actor, critic and optimizer states so training can be resumed.
+        """
+        torch.save(
+            {
+                "actor": self.actor.state_dict(),
+                "critic": self.critic.state_dict(),
+                "actor_optimizer": self.actor_optimizer.state_dict(),
+                "critic_optimizer": self.critic_optimizer.state_dict(),
+            },
+            path,
+        )
+
+    def load_checkpoint(self, path):
+        """
+        Restore actor, critic and optimizer states saved by save_checkpoint.
+        """
+        checkpoint = torch.load(path, map_location="cpu", weights_only=True)
+        self.actor.load_state_dict(checkpoint["actor"])
+        self.critic.load_state_dict(checkpoint["critic"])
+        self.actor_optimizer.load_state_dict(checkpoint["actor_optimizer"])
+        self.critic_optimizer.load_state_dict(checkpoint["critic_optimizer"])
+
     def close(self):
         return None

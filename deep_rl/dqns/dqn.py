@@ -3,65 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from utils.replay_buffer_v2 import ReplayBuffer
+from deep_rl.utils.replay_buffer_v2 import ReplayBuffer
+from deep_rl.utils.cnn import NeuralNetwork
 
 # Integrate TensorBoard for logging and monitoring training progress
 from torch.utils.tensorboard import SummaryWriter
 
-class NeuralNetwork(nn.Module):
-    def __init__(self, input_channels, height, output_dim):
-        """
-        Build a simple convolutional neural network with three convolutional layers to play the atari games
-        """
-        super(NeuralNetwork, self).__init__()
-        # Calculate the size of the output from the convolutional layers, assume that the input is a square image
-        conv1_output_height = (height - 8) // 4 + 1
-        conv2_output_height = (conv1_output_height - 4) // 2 + 1
-        conv3_output_height = (conv2_output_height - 3) + 1
-        conv_output_size = conv3_output_height * conv3_output_height * 64
-
-        self.feature = nn.Sequential(
-            nn.Conv2d(in_channels=input_channels, out_channels=32, kernel_size=8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, stride=1),
-            nn.ReLU(),
-            nn.Flatten()
-        )
-
-        # Value stream - Estimate the value function for a given state
-        self.V = nn.Sequential(
-            nn.Linear(conv_output_size, 512),
-            nn.ReLU(),
-            nn.Linear(512, 1)
-        )
-
-        # Advantage stream - Estimate the advantage of each action for a given state
-        self.A = nn.Sequential(
-            nn.Linear(conv_output_size, 512),
-            nn.ReLU(),
-            nn.Linear(512, output_dim)
-        )
-
-    def forward(self, x):
-        features = self.feature(x)
-        value = self.V(features)
-        advantage = self.A(features)
-
-        # Combine the value and advantage streams to get the Q-values
-        Q = value + (advantage - advantage.mean(dim=1, keepdim=True))
-        return Q
-
-    def predict(self, state):
-        """
-        Calculate the Q-values for a given state
-        """
-        with torch.no_grad():
-            q_values = self.forward(state)
-        return q_values
-
-class DuelingDQNAgent:
+class DQNAgent:
     def __init__(
         self,
         action_dim,
@@ -71,21 +19,24 @@ class DuelingDQNAgent:
         epsilon_end=0.01,
         exploration_fraction=0.1,
         exploration_steps=None,
-        buffer_size=500000,
+        buffer_size=500_000,
         batch_size=64,
         learning_starts=50_000,
         train_freq=4,
-        target_update_freq=5000,
+        target_update_freq=5_000,
         device='cuda',
         seed=2004,
         tensorboard_log_dir='runs',
         run_name=None
     ):
-        """Initialize the Dueling DQN agent.
+        """
+        Initialize the DQN agent.
 
-        Epsilon schedule, warm-up, and update frequencies are measured in
-        agent steps. ``exploration_steps`` overrides
-        ``exploration_fraction`` when provided.
+        ``epsilon_start`` and ``epsilon_end`` define the epsilon-greedy
+        bounds. ``exploration_fraction`` is the fraction of ``max_steps``
+        used for decay, while ``exploration_steps`` overrides it in agent
+        steps when provided. ``learning_starts`` is the warm-up duration in
+        agent steps.
         """
         self.action_dim = action_dim
         self.lr = lr
@@ -107,7 +58,7 @@ class DuelingDQNAgent:
             )
         self.epsilon = epsilon_start
         self.rng = torch.Generator().manual_seed(seed)
-        run_name = run_name or 'dueling_dqn'
+        run_name = run_name or 'dqn'
         self.run_name = f'{run_name}_seed_{seed}'
         self.writer = (
             SummaryWriter(log_dir=f'{tensorboard_log_dir}/{self.run_name}')
@@ -135,7 +86,9 @@ class DuelingDQNAgent:
             return q_values.argmax().item()
     
     def learn(self, env, max_steps=3_000_000):
-        """Train the Dueling DQN agent for at most ``max_steps`` steps."""
+        """
+        Train the DQN agent for at most ``max_steps`` agent steps.
+        """
         total_time_steps = 0
         exploration_steps = self.exploration_steps
         if exploration_steps is None:
@@ -167,6 +120,7 @@ class DuelingDQNAgent:
                 next_state, reward, terminated, truncated, _ = env.step(action)
 
                 # Add the transition to the replay buffer
+                # In this implementation, we consider the episode to be finished if either terminated or truncated is True
                 self.replay_buffer.add(state, action, reward, next_state, terminated or truncated)
 
                 if (
@@ -192,11 +146,6 @@ class DuelingDQNAgent:
                     q_values = self.network(states)
                     td_error = td_target - q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
 
-                    with torch.no_grad():
-                        features = self.network.feature(states)
-                        value = self.network.V(features)
-                        advantage = self.network.A(features)
-
                     loss = F.smooth_l1_loss(td_error, torch.zeros_like(td_error))
                     self.optimizer.zero_grad()
                     loss.backward()
@@ -212,16 +161,6 @@ class DuelingDQNAgent:
                         self.writer.add_scalar(
                             'Training/mean_q_value',
                             q_values.detach().mean().item(),
-                            total_time_steps
-                        )
-                        self.writer.add_scalar(
-                            'DuelingDQN/mean_value',
-                            value.mean().item(),
-                            total_time_steps
-                        )
-                        self.writer.add_scalar(
-                            'DuelingDQN/mean_abs_advantage',
-                            advantage.abs().mean().item(),
                             total_time_steps
                         )
 
@@ -244,11 +183,31 @@ class DuelingDQNAgent:
             episode_finished = is_terminated
             episode_idx += 1
             if self.writer is not None and episode_finished:
-                self.writer.add_scalar('Episode/return', episode_return, total_time_steps)
-                self.writer.add_scalar('Episode/length', episode_length, total_time_steps)
-                self.writer.add_scalar('Training/epsilon', self.epsilon, total_time_steps)
-                self.writer.add_scalar('Episode/index', episode_idx, total_time_steps)
-                self.writer.add_scalar('System/total_steps', total_time_steps, total_time_steps)
+                self.writer.add_scalar(
+                    'Episode/return',
+                    episode_return,
+                    total_time_steps
+                )
+                self.writer.add_scalar(
+                    'Episode/length',
+                    episode_length,
+                    total_time_steps
+                )
+                self.writer.add_scalar(
+                    'Training/epsilon',
+                    self.epsilon,
+                    total_time_steps
+                )
+                self.writer.add_scalar(
+                    'Episode/index',
+                    episode_idx,
+                    total_time_steps
+                )
+                self.writer.add_scalar(
+                    'System/total_steps',
+                    total_time_steps,
+                    total_time_steps
+                )
             if self.writer is not None and (
                 episode_finished or total_time_steps % 10_000 == 0
             ):

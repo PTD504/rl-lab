@@ -2,8 +2,8 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import numpy as np
-from utils.replay_buffer_v2 import ReplayBuffer
-from utils.cnn import NeuralNetwork
+from deep_rl.utils.replay_buffer_v2 import ReplayBuffer
+from deep_rl.utils.cnn import NeuralNetwork
 from torch.utils.tensorboard import SummaryWriter
 
 class DoubleDQNAgent:

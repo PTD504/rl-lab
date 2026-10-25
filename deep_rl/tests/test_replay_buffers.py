@@ -1,16 +1,11 @@
 import argparse
-import sys
 import time
-from pathlib import Path
 
 import numpy as np
 import torch
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from utils.replay_buffer_v1 import ReplayBuffer as V1ReplayBuffer
-from utils.replay_buffer_v2 import ReplayBuffer as OptimizedReplayBuffer
+from deep_rl.utils.replay_buffer_v1 import ReplayBuffer as V1ReplayBuffer
+from deep_rl.utils.replay_buffer_v2 import ReplayBuffer as OptimizedReplayBuffer
 
 
 def reference_stack(kept, index):

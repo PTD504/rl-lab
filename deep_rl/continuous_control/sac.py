@@ -1,12 +1,10 @@
-import sys
-from pathlib import Path
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from utils.replay_buffer import ReplayBuffer
+from deep_rl.utils.replay_buffer import ReplayBuffer
 
 
 class Actor(nn.Module):
